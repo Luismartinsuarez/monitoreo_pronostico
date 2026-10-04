@@ -1,0 +1,23 @@
+# 1. Bases de datos climáticas y archivos pesados
+*.nc
+*.nc4
+*.grib
+*.grb
+*.grb2
+*.hdf
+*.hdf5
+*.h5
+*.csv
+*.dat
+
+
+# 3. Entornos virtuales y caché de Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+venv/
+.conda/
+.env
+
+# 4. Configuraciones locales del editor
+.vscode/
