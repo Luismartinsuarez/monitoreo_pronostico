@@ -21,22 +21,51 @@ ESTILOS = {
 }
 
 
-def _series(var_tipo, df_obs, df_eta, df_ecmwf, df_gfs):
+def _series(var_tipo, df_obs, df_eta, df_ecmwf, df_gfs, ventana=None, unir_con=None,
+            pasado_del_modelo=False):
+    """Series a dibujar. Con `unir_con` (eta/ecmwf/gfs) el pasado muestra solo observaciones
+    y la línea observada (negra) continúa con el pronóstico de ese modelo; con
+    `pasado_del_modelo` el tramo pasado de la línea negra sale del propio modelo. Solo aplica
+    a temperaturas: la precipitación se mantiene con sus barras habituales."""
     est = ESTILOS[var_tipo]
     m = est["col_modelo"]
-    series = []
-    if df_obs is not None and not df_obs.empty and est["col_obs"] in df_obs.columns:
-        series.append(dict(df=df_obs, col=est["col_obs"], color="blue", edge="darkblue",
-                           marker="o", ls="-", lw=3.5, lbl_barra="Observado", lbl_linea="Observado"))
-    if not df_eta.empty:
-        series.append(dict(df=df_eta, col="ETA", color="red", edge="darkred",
-                           marker="s", ls="--", lw=3, lbl_barra="ETA/Senamhi", lbl_linea="Modelo ETA (eqm)"))
-    if not df_ecmwf.empty:
-        series.append(dict(df=df_ecmwf, col=f"{m}_ECMWF", color="green", edge="darkgreen",
-                           marker="s", ls="-.", lw=3, lbl_barra="ECMWF/IFS", lbl_linea="Modelo ECMWF (IFS)"))
-    if not df_gfs.empty:
-        series.append(dict(df=df_gfs, col=f"{m}_GFS", color="orange", edge="darkorange",
-                           marker="s", ls=":", lw=3, lbl_barra="GFS", lbl_linea="Modelo GFS"))
+    hay_obs = df_obs is not None and not df_obs.empty and est["col_obs"] in df_obs.columns
+    modelos = {
+        "eta": dict(df=df_eta, col="ETA", color="red", edge="darkred",
+                    marker="s", ls="--", lw=3, lbl_barra="ETA/Senamhi", lbl_linea="Modelo ETA"),
+        "ecmwf": dict(df=df_ecmwf, col=f"{m}_ECMWF", color="green", edge="darkgreen",
+                      marker="s", ls="-.", lw=3, lbl_barra="ECMWF/IFS", lbl_linea="Modelo ECMWF (IFS)"),
+        "gfs": dict(df=df_gfs, col=f"{m}_GFS", color="orange", edge="darkorange",
+                    marker="s", ls=":", lw=3, lbl_barra="GFS", lbl_linea="Modelo GFS"),
+    }
+
+    if unir_con and var_tipo != "PP":
+        # Modelos solo desde hoy (sin su parte pasada), salvo el elegido si aporta el pasado
+        for k, s in modelos.items():
+            if k == unir_con and pasado_del_modelo:
+                continue
+            if not s["df"].empty:
+                s["df"] = s["df"][s["df"]["Fecha"] >= ventana.hoy_date]
+        elegido = modelos.pop(unir_con)
+        partes = []
+        if hay_obs:
+            partes.append(df_obs[["Fecha", est["col_obs"]]].rename(columns={est["col_obs"]: "valor"}))
+        if not elegido["df"].empty:
+            partes.append(elegido["df"][["Fecha", elegido["col"]]].rename(columns={elegido["col"]: "valor"}))
+        series = []
+        if partes:
+            unida = pd.concat(partes).sort_values("Fecha")
+            lbl = (f"{elegido['lbl_barra']} (pasado + pronóstico)" if pasado_del_modelo
+                   else f"Observado + {elegido['lbl_barra']}")
+            series.append(dict(df=unida, col="valor", color="black", edge="black",
+                               marker="o", ls="-", lw=3.5, lbl_barra=lbl, lbl_linea=lbl))
+    else:
+        series = []
+        if hay_obs:
+            series.append(dict(df=df_obs, col=est["col_obs"], color="blue", edge="darkblue",
+                               marker="o", ls="-", lw=3.5, lbl_barra="Observado", lbl_linea="Observado"))
+
+    series.extend(s for s in modelos.values() if not s["df"].empty)
     return series
 
 
@@ -44,15 +73,17 @@ def plotar_grafico(ventana: Ventana, var_tipo: str, lugar: str,
                    df_eta: pd.DataFrame, df_ecmwf: pd.DataFrame, df_gfs: pd.DataFrame,
                    dir_salida: Path, df_obs: pd.DataFrame = None,
                    metadata_str: str = "", prefijo_titulo: str = "Estación",
-                   sufijo_archivo: str = "") -> Path:
+                   sufijo_archivo: str = "", unir_con: str = None,
+                   pasado_del_modelo: bool = False) -> Path:
     est = ESTILOS[var_tipo]
     fig, ax = plt.subplots(figsize=(12, 7))
 
     ax.set_facecolor(est["fondo_pron"])
-    ax.axvspan(ventana.inicio - timedelta(days=1), ventana.dia_antes_hoy,
+    ax.axvspan(ventana.inicio - timedelta(days=1), ventana.hoy_date - timedelta(days=0.5),
                color=est["fondo_hist"], alpha=est["alpha_hist"])
 
-    series = _series(var_tipo, df_obs, df_eta, df_ecmwf, df_gfs)
+    series = _series(var_tipo, df_obs, df_eta, df_ecmwf, df_gfs, ventana, unir_con,
+                     pasado_del_modelo)
 
     if var_tipo == "PP":
         n = len(series)
@@ -67,7 +98,7 @@ def plotar_grafico(ventana: Ventana, var_tipo: str, lugar: str,
                     color=s["color"], linewidth=s["lw"], markersize=10,
                     markeredgecolor=s["edge"], markeredgewidth=1.5, label=s["lbl_linea"], zorder=3)
 
-    ax.axvline(x=ventana.dia_antes_hoy, color="black", linestyle="-", alpha=0.5, linewidth=2, zorder=4)
+    ax.axvline(x=ventana.hoy_date - timedelta(days=0.5), color="black", linestyle="-", alpha=0.5, linewidth=2, zorder=4)
 
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%d/%m"))

@@ -20,6 +20,10 @@ DIAS_PASADOS = 3
 DIAS_FUTUROS = 6
 DIAS_DESCARGA_ETA = 4  # cuántos días hacia atrás se descargan del FTP
 
+# Estilos de gráfico: "clasico" (graficos.py), "moderno" (graficos_modernos.py)
+# o "boletin" (graficos_boletin.py)
+ESTILOS_GRAFICO = ("clasico", "moderno", "boletin")
+
 # Modelos disponibles
 MODELOS_DISPONIBLES = ("eta", "ecmwf", "gfs")
 

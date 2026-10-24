@@ -16,7 +16,10 @@ para una ventana de 3 días pasados + 6 días de pronóstico.
 │   ├── eta.py             # lectura del ETA en un punto (xarray)
 │   ├── openmeteo.py       # ECMWF / GFS vía Open-Meteo
 │   ├── observaciones.py   # CSV de estaciones automáticas/convencionales + metadatos
-│   ├── graficos.py        # gráficos (matplotlib)
+│   ├── graficos.py        # gráficos estilo clásico (matplotlib)
+│   ├── graficos_modernos.py  # gráficos estilo moderno (--estilo moderno)
+│   ├── graficos_boletin.py   # gráficos estilo boletín (--estilo boletin)
+│   ├── mapa.py            # mapa de ubicación de estaciones/puntos (--mapa, cartopy)
 │   ├── monitoreo.py       # orquestación de los dos modos
 │   └── cli.py             # línea de comandos
 ├── datos/                 # entradas (ver datos/README.md)
@@ -43,6 +46,18 @@ python -m pronostico descargar
 # 2a) Estaciones: observado + ETA + ECMWF + GFS
 python -m pronostico estaciones
 
+# 2a') Temperaturas: pasado solo con observaciones; la línea observada (negra) continúa con el
+#      pronóstico de un modelo; los demás modelos no se grafican (la precipitación usa barras)
+python -m pronostico estaciones --unir-con ecmwf      # o eta, gfs
+python -m pronostico estaciones --unir-con eta --pasado-del-modelo   # pasado también del modelo, sin observaciones
+
+# Cualquiera de los dos modos con otro diseño (los PNG llevan el sufijo _moderno / _boletin)
+python -m pronostico estaciones --estilo moderno
+python -m pronostico estaciones --estilo boletin      # para boletines: 300 ppp, letra grande, legible en B/N
+
+# Añadir un mapa con las estaciones/puntos utilizados (requiere cartopy)
+python -m pronostico estaciones --mapa
+
 # 2b) Solo modelos para puntos arbitrarios (datos/puntos_interes.csv)
 python -m pronostico modelos
 ```
@@ -63,7 +78,3 @@ Ver [`datos/README.md`](datos/README.md) para los formatos esperados. Los datos 
 pip install pytest
 pytest
 ```
-
-## Licencia
-
-MIT. Reemplaza `<TU NOMBRE>` en `LICENSE`.
