@@ -21,3 +21,12 @@ venv/
 
 # 4. Configuraciones locales del editor
 .vscode/
+
+# 5. Salidas generadas (se conserva solo la carpeta)
+graficos/*
+!graficos/.gitkeep
+graficos_modelos/*
+!graficos_modelos/.gitkeep
+
+# 6. Excepciones: ejemplos de datos de entrada
+!datos/*.example.csv
