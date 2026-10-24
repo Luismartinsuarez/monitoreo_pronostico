@@ -2,7 +2,7 @@
 import getpass
 import os
 from datetime import datetime, timedelta
-from ftplib import FTP
+from ftplib import FTP, error_perm
 from pathlib import Path
 
 from . import config
@@ -47,18 +47,21 @@ def _entrar(ftp: FTP, inicio: str, ruta: str) -> None:
     )
 
 
-def _descargar_archivo(ftp: FTP, nombre: str, destino: Path) -> bool:
-    """Descarga a un .part y renombra solo si fue exitoso (no deja archivos vacíos)."""
+def _descargar_archivo(ftp: FTP, nombre: str, destino: Path):
+    """Descarga a un .part y renombra solo si fue exitoso (no deja archivos vacíos).
+    Devuelve None si todo fue bien o un texto con el motivo del fallo."""
     parcial = destino.with_suffix(destino.suffix + ".part")
     try:
         with open(parcial, "wb") as f:
             ftp.retrbinary(f"RETR {nombre}", f.write)
         os.replace(parcial, destino)
-        return True
-    except Exception:
+        return None
+    except Exception as e:
         if parcial.exists():
             parcial.unlink()
-        return False
+        if isinstance(e, error_perm) and str(e).startswith("550"):
+            return "no encontrado"
+        return f"error: {type(e).__name__}: {e}"
 
 
 def descargar_eta(
@@ -88,9 +91,10 @@ def descargar_eta(
             print(f"\n--- Carpeta '{correccion}' ---")
             _entrar(ftp, inicio, f"{directorio}/{correccion}")
             for nombre in nombres_archivos(fechas, correccion):
-                if _descargar_archivo(ftp, nombre, destino / nombre):
+                fallo = _descargar_archivo(ftp, nombre, destino / nombre)
+                if fallo is None:
                     print(f" [OK]      {nombre}")
                 else:
-                    print(f" [OMITIDO] {nombre} (no encontrado)")
+                    print(f" [OMITIDO] {nombre} ({fallo})")
 
     print("\nProceso finalizado.")

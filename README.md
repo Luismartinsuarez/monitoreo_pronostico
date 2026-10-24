@@ -37,6 +37,24 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+### Windows (Anaconda Prompt o Miniforge Prompt)
+
+Con conda es más sencillo: `netCDF4` y `cartopy` se instalan ya compilados. Instalar todo desde
+`conda-forge` evita conflictos entre canales.
+
+```bat
+conda create -n meteo-env -c conda-forge python=3.12 pandas xarray netcdf4 matplotlib requests cartopy
+conda activate meteo-env
+cd /d "C:\ruta\a\monitoreo_pronostico"
+python -m pronostico estaciones --estilo boletin
+```
+
+- Cada vez que abras la consola, activa antes el entorno: `conda activate meteo-env`.
+- Credenciales del FTP en esa consola (CMD): `set SENAMHI_FTP_USER=usuario` y `set SENAMHI_FTP_PASS=clave`
+  (en PowerShell: `$env:SENAMHI_FTP_USER="usuario"`).
+- Los CSV de `datos/` no se versionan: cópialos aparte.
+- La primera vez que se usa `--mapa`, cartopy descarga capas de Natural Earth (requiere internet).
+
 ## Uso
 
 ```bash
